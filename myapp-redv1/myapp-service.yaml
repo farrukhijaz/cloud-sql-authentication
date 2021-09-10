@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-red-service
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  selector:
+    app: myapp
+    version: red
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8888
+  type: ClusterIP
+

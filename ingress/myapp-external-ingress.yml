@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: myapp-external-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /postgres-iam-auth
+        backend:
+          serviceName: myapp-postgres-iam-auth-service
+          servicePort: 80
+      - path: /k8-secret-auth
+        backend:
+          serviceName: myapp-k8-secret-auth-service 
+          servicePort: 80
+      - path: /csi-secret-auth
+        backend:
+          serviceName: myapp-csi-secret-auth-service
+          servicePort: 80
+      - path: /app-secret-auth
+        backend:
+          serviceName: myapp-app-secret-auth-service
+          servicePort: 80

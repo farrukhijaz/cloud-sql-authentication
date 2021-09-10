@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-postgres-iam-auth
+  labels:
+    app: myapp
+    version: postgres-iam-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      version: postgres-iam-auth
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: postgres-iam-auth
+    spec:
+      serviceAccountName: gke-sa-storage-sql
+      containers:
+      - name: myapp-postgres-iam-auth
+        image: gcr.io/dev-sofi-reachengine-1120/myapp:postgres-iam-auth
+        imagePullPolicy: Always
+        env:
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: cm-gke-sa-storage-sql
+              key: db-iam-user   
+        - name: BUCKET_URL
+          valueFrom:
+            configMapKeyRef:
+              name: cm-gke-sa-storage-sql
+              key: storage-bucket                     
+        ports:
+        - containerPort: 8888
+        livenessProbe:
+          httpGet:
+            path: /isalive 
+            port: 8888
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /isready 
+            port: 8888
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: "0.2"
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: "0.2"
+        env:
+        - name: DB_CONNECTION
+          valueFrom:
+            configMapKeyRef:
+              name: cm-gke-sa-storage-sql
+              key: postgres-connection
+        command: ["/cloud_sql_proxy",
+                  "-instances=$(DB_CONNECTION)=tcp:5432", "-enable_iam_login"]

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-red
+  labels:
+    app: myapp
+    version: red
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      version: red
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: red
+    spec:
+      serviceAccountName: myapp-red-ksa
+      containers:
+      - name: myapp-red
+        image: gcr.io/fi-dev-app-gke/myapp:redv1
+        ports:
+        - containerPort: 8888
+        livenessProbe:
+          httpGet:
+            path: /isalive
+            port: 8888
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /isready
+            port: 8888
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.11
+        command: ["/cloud_sql_proxy",
+                  "-instances=fi-dev-app-gke:us-east1:myapp-red-mysql=tcp:3306"]

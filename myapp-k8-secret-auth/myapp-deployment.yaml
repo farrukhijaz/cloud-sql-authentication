@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-k8-secret-auth
+  labels:
+    app: myapp
+    version: k8-secret-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      version: k8-secret-auth
+  template:
+    metadata:
+      labels:
+        app: myapp
+        version: k8-secret-auth
+    spec:
+      serviceAccountName: gke-sa-storage-sql
+      containers:
+      - name: myapp-k8-secret-auth
+        image: gcr.io/dev-sofi-reachengine-1120/myapp:k8-secret-auth
+        imagePullPolicy: Always
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: secret-db-auth
+              key: username
+        - name: DB_PWD
+          valueFrom:
+            secretKeyRef:
+              name: secret-db-auth
+              key: password
+        ports:
+        - containerPort: 8888
+        livenessProbe:
+          httpGet:
+            path: /isalive 
+            port: 8888
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /isready 
+            port: 8888
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: "0.2"
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: "0.2"
+        env:
+        - name: DB_CONNECTION
+          valueFrom:
+            configMapKeyRef:
+              name: cm-gke-sa-storage-sql
+              key: postgres-connection
+        command: ["/cloud_sql_proxy",
+                  "-instances=$(DB_CONNECTION)=tcp:5432"]
